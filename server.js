@@ -10,7 +10,16 @@ app.use(express.json()); // for parsing JSON bodies
 // ✅ Swagger route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// ✅ Root route
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Hello World
+ *     description: Returns a welcome message from the CSE341 Project.
+ *     responses:
+ *       200:
+ *         description: A successful response
+ */
 app.get('/', (req, res) => {
   res.send('Hello World from CSE341 Project!');
 });

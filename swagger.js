@@ -11,11 +11,11 @@ const options = {
     },
     servers: [
       {
-        url: 'https://nengi-cse341-project.onrender.com', // Replace with your Render URL
+        url: 'https://nengi-cse341-project.onrender.com', // Replace with your actual Render URL
       },
     ],
   },
-  apis: ['./routes/*.js'], // path to your routes
+  apis: ['./routes/*.js', './server.js'], // ✅ Include server.js for Hello World route
 };
 
 const swaggerSpec = swaggerJSDoc(options);
