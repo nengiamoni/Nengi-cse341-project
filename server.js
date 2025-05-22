@@ -1,17 +1,22 @@
 const express = require('express');
 const mongodb = require('./data/database');
+const { swaggerUi, swaggerSpec } = require('./swagger'); // ✅ Import Swagger
 const app = express();
 
 const port = process.env.PORT || 3000;
 
 app.use(express.json()); // for parsing JSON bodies
 
-app.use('/contacts', require('./routes/contacts'));
+// ✅ Swagger route
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// ✅ Add root route
+// ✅ Root route
 app.get('/', (req, res) => {
   res.send('Hello World from CSE341 Project!');
 });
+
+// ✅ Main API route
+app.use('/contacts', require('./routes/contacts'));
 
 mongodb.initDb((err) => {
   if (err) {

@@ -1,40 +1,138 @@
 const express = require('express');
 const router = express.Router();
-const { ObjectId } = require('mongodb');
-const db = require('../data/database');
+const contactsController = require('../controllers/contactsController');
 
-// GET /contacts — get all contacts
-router.get('/', async (req, res) => {
-  try {
-    const database = db.getDatabase();
-    const contacts = await database.collection('contacts').find().toArray();
-    res.status(200).json(contacts);
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch contacts', error });
-  }
-});
+/**
+ * @swagger
+ * /contacts:
+ *   get:
+ *     summary: Get all contacts
+ *     tags: [Contacts]
+ *     responses:
+ *       200:
+ *         description: A list of contacts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ */
+router.get('/', contactsController.getAllContacts);
 
-// GET /contacts/:id — get contact by ID
-router.get('/:id', async (req, res) => {
-  const contactId = req.params.id;
+/**
+ * @swagger
+ * /contacts/{id}:
+ *   get:
+ *     summary: Get a contact by ID
+ *     tags: [Contacts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Contact ID
+ *     responses:
+ *       200:
+ *         description: Contact found
+ *       404:
+ *         description: Contact not found
+ */
+router.get('/:id', contactsController.getContactById);
 
-  // Validate ObjectId
-  if (!ObjectId.isValid(contactId)) {
-    return res.status(400).json({ message: 'Invalid contact ID format' });
-  }
+/**
+ * @swagger
+ * /contacts:
+ *   post:
+ *     summary: Create a new contact
+ *     tags: [Contacts]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - email
+ *               - favoriteColor
+ *               - birthday
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               favoriteColor:
+ *                 type: string
+ *               birthday:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       201:
+ *         description: Contact created
+ */
+router.post('/', contactsController.createContact);
 
-  try {
-    const database = db.getDatabase();
-    const contact = await database.collection('contacts').findOne({ _id: new ObjectId(contactId) });
+/**
+ * @swagger
+ * /contacts/{id}:
+ *   put:
+ *     summary: Update a contact
+ *     tags: [Contacts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Contact ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               favoriteColor:
+ *                 type: string
+ *               birthday:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Contact updated
+ *       404:
+ *         description: Contact not found
+ */
+router.put('/:id', contactsController.updateContact);
 
-    if (!contact) {
-      return res.status(404).json({ message: 'Contact not found' });
-    }
-
-    res.status(200).json(contact);
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch contact', error });
-  }
-});
+/**
+ * @swagger
+ * /contacts/{id}:
+ *   delete:
+ *     summary: Delete a contact
+ *     tags: [Contacts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Contact ID
+ *     responses:
+ *       200:
+ *         description: Contact deleted
+ *       404:
+ *         description: Contact not found
+ */
+router.delete('/:id', contactsController.deleteContact);
 
 module.exports = router;
