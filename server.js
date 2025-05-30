@@ -1,38 +1,58 @@
 const express = require('express');
-const mongodb = require('./data/database');
-const { swaggerUi, swaggerSpec } = require('./swagger'); // ✅ Import Swagger
+const mongoose = require('mongoose');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsDoc = require('swagger-jsdoc');
+require('dotenv').config();
+
 const app = express();
 
-const port = process.env.PORT || 3000;
+// Middleware
+app.use(express.json());
 
-app.use(express.json()); // for parsing JSON bodies
+// Swagger configuration
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'CSE341 Project API',
+      version: '1.0.0',
+      description: 'A REST API for managing books and authors',
+    },
+    servers: [
+      {
+        url: 'http://localhost:3000',
+        description: 'Development server',
+      },
+    ],
+  },
+  apis: ['./routes/*.js'], // Path to the API routes
+};
 
-// ✅ Swagger route
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-/**
- * @swagger
- * /:
- *   get:
- *     summary: Hello World
- *     description: Returns a welcome message from the CSE341 Project.
- *     responses:
- *       200:
- *         description: A successful response
- */
-app.get('/', (req, res) => {
-  res.send('Hello World from CSE341 Project!');
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('Could not connect to MongoDB:', err));
+
+// Routes
+const bookRoutes = require('./routes/books');
+const authorRoutes = require('./routes/authors');
+
+app.use('/api/books', bookRoutes);
+app.use('/api/authors', authorRoutes);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : {}
+  });
 });
 
-// ✅ Main API route
-app.use('/contacts', require('./routes/contacts'));
-
-mongodb.initDb((err) => {
-  if (err) {
-    console.log(err);
-  } else {
-    app.listen(port, () => {
-      console.log(`Database is listening and Node is running on port ${port}`);
-    });
-  }
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
