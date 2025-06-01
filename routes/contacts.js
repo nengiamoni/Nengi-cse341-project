@@ -1,26 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const contactsController = require('../controllers/contactsController');
+const { body, validationResult } = require('express-validator');
+const Contact = require('../models/Contact');
 
 /**
  * @swagger
- * /contacts:
+ * /api/contacts:
  *   get:
  *     summary: Get all contacts
  *     tags: [Contacts]
  *     responses:
  *       200:
- *         description: A list of contacts
- *         content:
- *           application/json:
- *             schema:
- *               type: array
+ *         description: List of all contacts
+ *       500:
+ *         description: Server error
  */
-router.get('/', contactsController.getAllContacts);
+router.get('/', async (req, res) => {
+  try {
+    const contacts = await Contact.find();
+    res.json(contacts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 /**
  * @swagger
- * /contacts/{id}:
+ * /api/contacts/{id}:
  *   get:
  *     summary: Get a contact by ID
  *     tags: [Contacts]
@@ -30,18 +36,29 @@ router.get('/', contactsController.getAllContacts);
  *         required: true
  *         schema:
  *           type: string
- *         description: Contact ID
  *     responses:
  *       200:
- *         description: Contact found
+ *         description: Contact details
  *       404:
  *         description: Contact not found
+ *       500:
+ *         description: Server error
  */
-router.get('/:id', contactsController.getContactById);
+router.get('/:id', async (req, res) => {
+  try {
+    const contact = await Contact.findById(req.params.id);
+    if (!contact) {
+      return res.status(404).json({ message: 'Contact not found' });
+    }
+    res.json(contact);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 /**
  * @swagger
- * /contacts:
+ * /api/contacts:
  *   post:
  *     summary: Create a new contact
  *     tags: [Contacts]
@@ -57,27 +74,45 @@ router.get('/:id', contactsController.getContactById);
  *               - email
  *               - favoriteColor
  *               - birthday
- *             properties:
- *               firstName:
- *                 type: string
- *               lastName:
- *                 type: string
- *               email:
- *                 type: string
- *               favoriteColor:
- *                 type: string
- *               birthday:
- *                 type: string
- *                 format: date
+ *               - phoneNumber
+ *               - address
  *     responses:
  *       201:
- *         description: Contact created
+ *         description: Contact created successfully
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Server error
  */
-router.post('/', contactsController.createContact);
+router.post('/', [
+  body('firstName').trim().isLength({ min: 2 }),
+  body('lastName').trim().isLength({ min: 2 }),
+  body('email').isEmail().normalizeEmail(),
+  body('favoriteColor').trim().notEmpty(),
+  body('birthday').isISO8601(),
+  body('phoneNumber').matches(/^\+?[\d\s-]{10,}$/),
+  body('address.street').trim().notEmpty(),
+  body('address.city').trim().notEmpty(),
+  body('address.state').trim().notEmpty(),
+  body('address.zipCode').matches(/^\d{5}(-\d{4})?$/)
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const contact = new Contact(req.body);
+    const newContact = await contact.save();
+    res.status(201).json(newContact);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 /**
  * @swagger
- * /contacts/{id}:
+ * /api/contacts/{id}:
  *   put:
  *     summary: Update a contact
  *     tags: [Contacts]
@@ -87,36 +122,57 @@ router.post('/', contactsController.createContact);
  *         required: true
  *         schema:
  *           type: string
- *         description: Contact ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             properties:
- *               firstName:
- *                 type: string
- *               lastName:
- *                 type: string
- *               email:
- *                 type: string
- *               favoriteColor:
- *                 type: string
- *               birthday:
- *                 type: string
- *                 format: date
  *     responses:
  *       200:
- *         description: Contact updated
+ *         description: Contact updated successfully
  *       404:
  *         description: Contact not found
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Server error
  */
-router.put('/:id', contactsController.updateContact);
+router.put('/:id', [
+  body('firstName').optional().trim().isLength({ min: 2 }),
+  body('lastName').optional().trim().isLength({ min: 2 }),
+  body('email').optional().isEmail().normalizeEmail(),
+  body('favoriteColor').optional().trim().notEmpty(),
+  body('birthday').optional().isISO8601(),
+  body('phoneNumber').optional().matches(/^\+?[\d\s-]{10,}$/),
+  body('address.street').optional().trim().notEmpty(),
+  body('address.city').optional().trim().notEmpty(),
+  body('address.state').optional().trim().notEmpty(),
+  body('address.zipCode').optional().matches(/^\d{5}(-\d{4})?$/)
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  try {
+    const contact = await Contact.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!contact) {
+      return res.status(404).json({ message: 'Contact not found' });
+    }
+    res.json(contact);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 /**
  * @swagger
- * /contacts/{id}:
+ * /api/contacts/{id}:
  *   delete:
  *     summary: Delete a contact
  *     tags: [Contacts]
@@ -126,13 +182,24 @@ router.put('/:id', contactsController.updateContact);
  *         required: true
  *         schema:
  *           type: string
- *         description: Contact ID
  *     responses:
  *       200:
- *         description: Contact deleted
+ *         description: Contact deleted successfully
  *       404:
  *         description: Contact not found
+ *       500:
+ *         description: Server error
  */
-router.delete('/:id', contactsController.deleteContact);
+router.delete('/:id', async (req, res) => {
+  try {
+    const contact = await Contact.findByIdAndDelete(req.params.id);
+    if (!contact) {
+      return res.status(404).json({ message: 'Contact not found' });
+    }
+    res.json({ message: 'Contact deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;

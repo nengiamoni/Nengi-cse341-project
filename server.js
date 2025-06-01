@@ -16,7 +16,7 @@ const swaggerOptions = {
     info: {
       title: 'CSE341 Project API',
       version: '1.0.0',
-      description: 'A REST API for managing books and authors',
+      description: 'A REST API for managing books, authors, and contacts',
     },
     servers: [
       {
@@ -39,9 +39,11 @@ mongoose.connect(process.env.MONGODB_URI)
 // Routes
 const bookRoutes = require('./routes/books');
 const authorRoutes = require('./routes/authors');
+const contactRoutes = require('./routes/contacts');
 
 app.use('/api/books', bookRoutes);
 app.use('/api/authors', authorRoutes);
+app.use('/api/contacts', contactRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
