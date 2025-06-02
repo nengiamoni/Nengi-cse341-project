@@ -2,12 +2,18 @@ const express = require('express');
 const mongoose = require('mongoose');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
 
 // Middleware
 app.use(express.json());
+app.use(cors());
+
+// Get the base URL for Swagger
+const baseUrl = process.env.NODE_ENV === 'production' 
+  ? process.env.RENDER_EXTERNAL_URL || 'https://nengi-cse341-project.onrender.com' : 'http://localhost:3000';
 
 // Swagger configuration
 const swaggerOptions = {
@@ -20,8 +26,8 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: 'http://localhost:3000',
-        description: 'Development server',
+        url: baseUrl,
+        description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server',
       },
     ],
   },
