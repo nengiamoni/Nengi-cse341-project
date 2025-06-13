@@ -3,6 +3,7 @@ const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/user');
 
+
 // Local strategy
 passport.use(new LocalStrategy(async (username, password, done) => {
   try {
