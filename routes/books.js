@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const Book = require('../models/Book');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -62,6 +63,8 @@ router.get('/:id', async (req, res) => {
  *   post:
  *     summary: Create a new book
  *     tags: [Books]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -81,10 +84,12 @@ router.get('/:id', async (req, res) => {
  *         description: Book created successfully
  *       400:
  *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  *       500:
  *         description: Server error
  */
-router.post('/', [
+router.post('/', authenticate, [
   body('title').trim().isLength({ min: 2 }),
   body('author').isMongoId(),
   body('isbn').trim().notEmpty(),
@@ -113,6 +118,8 @@ router.post('/', [
  *   put:
  *     summary: Update a book
  *     tags: [Books]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -132,10 +139,12 @@ router.post('/', [
  *         description: Book not found
  *       400:
  *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  *       500:
  *         description: Server error
  */
-router.put('/:id', [
+router.put('/:id', authenticate, [
   body('title').optional().trim().isLength({ min: 2 }),
   body('author').optional().isMongoId(),
   body('isbn').optional().trim().notEmpty(),
@@ -170,6 +179,8 @@ router.put('/:id', [
  *   delete:
  *     summary: Delete a book
  *     tags: [Books]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -181,10 +192,12 @@ router.put('/:id', [
  *         description: Book deleted successfully
  *       404:
  *         description: Book not found
+ *       401:
+ *         description: Unauthorized
  *       500:
  *         description: Server error
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const book = await Book.findByIdAndDelete(req.params.id);
     if (!book) {
@@ -196,4 +209,4 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

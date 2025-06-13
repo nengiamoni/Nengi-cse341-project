@@ -2,20 +2,27 @@ const express = require('express');
 const mongoose = require('mongoose');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
+const passport = require('passport');
 const cors = require('cors');
 require('dotenv').config();
 
+// Initialize app
 const app = express();
+
+// Passport config
+require('./config/passport');
 
 // Middleware
 app.use(express.json());
 app.use(cors());
+app.use(passport.initialize());
 
-// Get the base URL for Swagger
-const baseUrl = process.env.NODE_ENV === 'production' 
-  ? process.env.RENDER_EXTERNAL_URL || 'https://nengi-cse341-project.onrender.com' : 'http://localhost:3000';
+// Swagger base URL
+const baseUrl = process.env.NODE_ENV === 'production'
+  ? process.env.RENDER_EXTERNAL_URL || 'https://nengi-cse341-project.onrender.com'
+  : 'http://localhost:3000';
 
-// Swagger configuration
+// Swagger config
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
@@ -30,8 +37,18 @@ const swaggerOptions = {
         description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server',
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [{ bearerAuth: [] }],
   },
-  apis: ['./routes/*.js'], // Path to the API routes
+  apis: ['./routes/*.js'],
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
@@ -39,45 +56,42 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-  family: 4 // Use IPv4, skip trying IPv6
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  family: 4
 })
-  .then(() => console.log('Connected to MongoDB'))
+  .then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => {
-    console.error('Could not connect to MongoDB:', err);
-    process.exit(1); // Exit process with failure
+    console.error('❌ MongoDB connection error:', err);
+    process.exit(1);
   });
 
-// Add connection error handler
-mongoose.connection.on('error', err => {
-  console.error('MongoDB connection error:', err);
-});
-
-// Add disconnection handler
 mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
+  console.log('⚠️ MongoDB disconnected');
 });
 
 // Routes
-const bookRoutes = require('./routes/books');
+const bookRoutes = require('./routes/book');
 const authorRoutes = require('./routes/authors');
 const contactRoutes = require('./routes/contacts');
+const authRoutes = require('./routes/auth');
 
 app.use('/api/books', bookRoutes);
 app.use('/api/authors', authorRoutes);
 app.use('/api/contacts', contactRoutes);
+app.use('/api/auth', authRoutes);
 
-// Error handling middleware
+// Error Handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Unhandled Error:', err.stack);
   res.status(500).json({
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'development' ? err.message : {}
   });
 });
 
+// Start Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
